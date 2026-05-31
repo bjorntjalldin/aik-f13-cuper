@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIK F13 – Cupinventering 2026/27</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap');
+:root {
+  --black:#0d0d0d; --yellow:#f0d000; --gold:#a8945a;
+  --white:#f5f5f0; --grey:#1a1a1a; --mid:#2a2a2a;
+  --light:#9a9a92; --card:#222;
+  --green:#2ecc71; --red:#e74c3c; --amber:#f39c12;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:14px}
+body{background:var(--black);color:var(--white);font-family:'Barlow',sans-serif;min-height:100vh}
+
+header{background:#000;border-bottom:3px solid var(--yellow);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-badge{width:44px;height:44px;background:var(--yellow);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:13px;color:#000;line-height:1.1;text-align:center;flex-shrink:0}
+.logo-text h1{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;color:var(--yellow);letter-spacing:1px;text-transform:uppercase}
+.logo-text p{font-size:11px;color:var(--light);letter-spacing:.5px}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#status-bar{font-size:11px;color:var(--light);letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+#status-dot{width:8px;height:8px;border-radius:50%;background:#444;flex-shrink:0}
+#status-dot.ok{background:var(--green)}
+#status-dot.loading{background:var(--amber);animation:pulse 1s infinite}
+#status-dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.tabs{background:#111;border-bottom:1px solid #252525;display:flex;padding:0 24px;gap:2px;overflow-x:auto}
+.tab{padding:10px 16px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--light);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--white)}
+.tab.active{color:var(--yellow);border-bottom-color:var(--yellow)}
+
+.page{display:none;padding:22px 24px}
+.page.active{display:block}
+
+/* SETUP BANNER */
+#setup-banner{background:#1a1200;border:1.5px solid var(--gold);border-radius:8px;padding:16px 20px;margin-bottom:22px;display:flex;gap:14px;align-items:flex-start}
+#setup-banner.hidden{display:none}
+.setup-icon{font-size:22px;flex-shrink:0;margin-top:1px}
+.setup-body h3{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--yellow);letter-spacing:1px;margin-bottom:6px}
+.setup-body p{font-size:12px;color:var(--light);line-height:1.6}
+.setup-body code{background:#2a2000;color:var(--yellow);padding:1px 6px;border-radius:3px;font-size:11px;word-break:break-all}
+.setup-input{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.setup-input input{flex:1;min-width:240px;background:#111;border:1.5px solid #444;border-radius:5px;color:var(--white);padding:7px 12px;font-size:12px;font-family:'Barlow',sans-serif}
+.setup-input input:focus{outline:none;border-color:var(--yellow)}
+.setup-input input::placeholder{color:#555}
+.btn-save-url{background:var(--yellow);color:#000;border:none;border-radius:5px;padding:7px 16px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;white-space:nowrap}
+.btn-save-url:hover{background:#d4b800}
+
+/* NAME SELECTOR */
+#who-bar{background:var(--grey);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#who-bar label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--yellow);letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+#who-select{background:var(--mid);border:1.5px solid #444;border-radius:5px;color:var(--white);padding:6px 12px;font-size:13px;font-family:'Barlow',sans-serif;cursor:pointer;min-width:200px}
+#who-select:focus{outline:none;border-color:var(--yellow)}
+#who-select.chosen{border-color:var(--green);color:var(--green)}
+#who-hint{font-size:12px;color:var(--light)}
+
+/* CUP CARDS */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.filter-label{font-size:11px;color:var(--light);letter-spacing:1px;text-transform:uppercase}
+.filter-btn{padding:4px 12px;border-radius:20px;border:1.5px solid #333;background:none;color:#888;font-size:12px;cursor:pointer;transition:all .15s;font-family:'Barlow',sans-serif}
+.filter-btn:hover,.filter-btn.on{border-color:var(--yellow);color:var(--yellow);background:rgba(240,208,0,.08)}
+
+.cups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.cup-card{background:var(--card);border-radius:8px;overflow:hidden;border:1px solid #2a2a2a;transition:border-color .15s}
+.cup-card:hover{border-color:#3a3a3a}
+.cup-card.prio{border-color:rgba(168,148,90,.4)}
+.cup-card.prio:hover{border-color:var(--gold)}
+.cup-hdr{padding:11px 14px;border-bottom:1px solid #2a2a2a;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.cup-name{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--white);text-transform:uppercase;line-height:1.15}
+.cup-date{font-size:11px;color:var(--gold);margin-top:2px;letter-spacing:.3px}
+.prio-badge{background:var(--gold);color:#000;font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:3px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+.cup-body{padding:11px 14px;display:flex;flex-direction:column;gap:7px}
+.cup-meta-row{display:flex;gap:5px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.3px}
+.dl{background:rgba(46,204,113,.12);color:#2ecc71;border:1px solid rgba(46,204,113,.25)}
+.dm{background:rgba(243,156,18,.12);color:#f39c12;border:1px solid rgba(243,156,18,.25)}
+.ds{background:rgba(231,76,60,.12);color:#e74c3c;border:1px solid rgba(231,76,60,.25)}
+.de{background:rgba(155,89,182,.12);color:#bb8fce;border:1px solid rgba(155,89,182,.25)}
+.cg{background:rgba(46,204,113,.1);color:#2ecc71;border:1px solid rgba(46,204,113,.2)}
+.cy{background:rgba(243,156,18,.1);color:#f39c12;border:1px solid rgba(243,156,18,.2)}
+.cr{background:rgba(231,76,60,.1);color:#e74c3c;border:1px solid rgba(231,76,60,.2)}
+.cup-cost{font-size:11px;color:var(--light)}
+.cup-comment{font-size:11px;color:var(--gold);font-style:italic}
+.cup-age{font-size:11px;color:#555}
+
+/* RESPONSE CONTROL on card */
+.cup-resp-area{margin-top:6px;padding-top:10px;border-top:1px solid #2a2a2a}
+.cup-resp-label{font-size:10px;color:#555;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.resp-btns{display:flex;gap:5px;flex-wrap:wrap}
+.resp-btn{flex:1;min-width:56px;padding:5px 4px;border-radius:4px;border:1.5px solid #333;background:none;color:#666;font-size:11px;font-weight:600;cursor:pointer;font-family:'Barlow',sans-serif;transition:all .15s;text-align:center}
+.resp-btn:hover{border-color:#666;color:#aaa}
+.resp-btn.sel-allin{background:rgba(46,204,113,.18);border-color:#2ecc71;color:#2ecc71}
+.resp-btn.sel-troligtvis{background:rgba(243,156,18,.15);border-color:#f39c12;color:#f39c12}
+.resp-btn.sel-tveksamt{background:rgba(231,76,60,.12);border-color:#c0392b;color:#e07060}
+.resp-btn.sel-nej{background:rgba(100,100,100,.15);border-color:#555;color:#777}
+.cup-saved-tick{font-size:10px;color:var(--green);margin-top:5px;height:14px;transition:opacity .3s}
+
+/* TABLE VIEW */
+.section-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--yellow);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;margin-top:24px}
+.section-title:first-child{margin-top:0}
+.table-wrap{overflow-x:auto;border-radius:7px;border:1px solid #252525;margin-bottom:24px}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:600px}
+thead tr{background:#111}
+th{padding:8px 10px;text-align:left;font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;font-size:10px;border-bottom:2px solid #252525;white-space:nowrap}
+th.cth{text-align:center;max-width:72px;overflow:hidden;text-overflow:ellipsis}
+tbody tr{border-bottom:1px solid #1c1c1c;transition:background .1s}
+tbody tr:hover{background:#1c1c1c}
+td{padding:6px 10px;vertical-align:middle}
+td:first-child{font-weight:500;white-space:nowrap}
+td.cc{text-align:center;padding:3px 5px}
+.cell-badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap}
+.cb-allin{background:rgba(46,204,113,.18);color:#2ecc71}
+.cb-troligtvis{background:rgba(243,156,18,.15);color:#f39c12}
+.cb-tveksamt{background:rgba(231,76,60,.1);color:#e07060}
+.cb-nej{background:rgba(100,100,100,.12);color:#666}
+.cb-empty{color:#2a2a2a;font-size:9px}
+
+/* SUMMARY */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.sum-card{background:var(--card);border-radius:6px;padding:12px 14px;border:1px solid #252525}
+.sum-card-name{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--white);text-transform:uppercase;margin-bottom:2px}
+.sum-card-date{font-size:10px;color:var(--gold);margin-bottom:8px}
+.sbrow{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.sblabel{font-size:10px;color:var(--light);width:72px;flex-shrink:0}
+.sbtrack{flex:1;height:8px;background:#1e1e1e;border-radius:4px;overflow:hidden}
+.sbfill{height:100%;border-radius:4px;transition:width .4s}
+.fa{background:var(--green)}
+.ft{background:var(--amber)}
+.fv{background:#c0392b}
+.fn{background:#3a3a3a}
+.sbval{font-size:10px;color:#555;width:16px;text-align:right;flex-shrink:0}
+.sum-footer{font-size:10px;color:#383838;margin-top:6px}
+
+/* INFO */
+.info-box{background:var(--grey);border:1px solid #2a2a2a;border-left:4px solid var(--yellow);border-radius:6px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--light);line-height:1.7}
+.info-box strong{color:var(--white)}
+.readme{background:var(--grey);border-radius:8px;padding:20px 24px;border:1px solid #252525;line-height:1.8;font-size:13px;color:var(--light)}
+.readme p{margin-bottom:10px}
+.readme ul{padding-left:18px;margin-bottom:10px}
+.readme li{margin-bottom:5px}
+.readme strong{color:var(--white)}
+.oopt{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:600;margin:0 2px}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:#1e1e1e;border:1.5px solid var(--yellow);border-radius:6px;padding:10px 18px;font-size:12px;color:var(--white);z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;letter-spacing:.5px}
+#toast.show{opacity:1}
+
+@media(max-width:580px){
+  .page{padding:14px 14px}
+  header{padding:12px 14px}
+  .cups-grid{grid-template-columns:1fr}
+  .resp-btns{gap:4px}
+  .resp-btn{font-size:10px;padding:4px 3px}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-badge">AIK<br>F13</div>
+    <div class="logo-text">
+      <h1>Cupinventering 2026/27</h1>
+      <p>AIK Handboll F2013 &nbsp;·&nbsp; Säsong 2026/27</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="status-bar"><div id="status-dot"></div><span id="status-text">Inte konfigurerad</span></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('cuper',this)">🏆 Cuper</div>
+  <div class="tab" onclick="showTab('oversikt',this)">📋 Översikt</div>
+  <div class="tab" onclick="showTab('sammanfattning',this)">📊 Sammanfattning</div>
+  <div class="tab" onclick="showTab('info',this)">ℹ Info</div>
+</div>
+
+<!-- ══ CUPER ══ -->
+<div class="page active" id="tab-cuper">
+
+  <div id="setup-banner">
+    <div class="setup-icon">⚙️</div>
+    <div class="setup-body">
+      <h3>Konfiguration krävs</h3>
+      <p>Klistra in din <strong>Google Apps Script URL</strong> nedan för att aktivera delad lagring. Instruktioner finns i <code>SETUP.md</code>.</p>
+      <div class="setup-input">
+        <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/…/exec" />
+        <button class="btn-save-url" onclick="saveScriptUrl()">Spara &amp; testa</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="who-bar">
+    <label>Jag är:</label>
+    <select id="who-select" onchange="onWhoChange()">
+      <option value="">– Välj ditt namn –</option>
+      <optgroup label="Spelare (föräldrar svarar)">
+        <option>Bonnie Taranger</option>
+        <option>Zin Ari Cebe</option>
+        <option>Ebba Ridderheim Jonviken</option>
+        <option>Mio Johansson</option>
+        <option>Nova Öhgren Goude</option>
+        <option>Tyra Ridderheim Jonviken</option>
+        <option>Blanka Matusiak</option>
+        <option>Nathalie Vega</option>
+        <option>Celine Demirel</option>
+        <option>Elise Tjälldin</option>
+        <option>Ellen Hamming</option>
+        <option>Melina Varitimidou</option>
+        <option>Ida Ekelund</option>
+        <option>Penny Lindblad</option>
+        <option>Olivia Better</option>
+        <option>Agnes von Mecklenburg</option>
+        <option>Ebba Behm</option>
+        <option>Alicia Wikstad</option>
+        <option>Elsa Expert</option>
+        <option>Ellen Lindgren</option>
+        <option>Gabriella Saouma</option>
+        <option>Gizem Celebi</option>
+        <option>Melanie Södergren Tärnholm</option>
+        <option>Lea Westman</option>
+        <option>Antonia Lockner</option>
+        <option>Lina Krantz</option>
+      </optgroup>
+      <optgroup label="Ledare">
+        <option>Martin</option>
+        <option>Mikael</option>
+        <option>Mike</option>
+        <option>Danne</option>
+        <option>Patrick</option>
+      </optgroup>
+    </select>
+    <span id="who-hint">Välj ditt namn för att kunna svara på cuper</span>
+  </div>
+
+  <div class="filter-bar">
+    <span class="filter-label">Svårighet:</span>
+    <button class="filter-btn on" data-f="diff" data-v="all" onclick="setFilter(this,'diff')">Alla</button>
+    <button class="filter-btn" data-f="diff" data-v="latt" onclick="setFilter(this,'diff')">Lätt</button>
+    <button class="filter-btn" data-f="diff" data-v="medel" onclick="setFilter(this,'diff')">Medel</button>
+    <button class="filter-btn" data-f="diff" data-v="svar" onclick="setFilter(this,'diff')">Svår</button>
+    <button class="filter-btn" data-f="diff" data-v="extra" onclick="setFilter(this,'diff')">Extra svår</button>
+    &nbsp;
+    <button class="filter-btn on" data-f="prio" data-v="all" onclick="setFilter(this,'prio')">Alla</button>
+    <button class="filter-btn" data-f="prio" data-v="prio" onclick="setFilter(this,'prio')">⭐ Prio</button>
+  </div>
+
+  <div class="cups-grid" id="cups-grid"></div>
+</div>
+
+<!-- ══ ÖVERSIKT ══ -->
+<div class="page" id="tab-oversikt">
+  <div class="info-box">Alla svar från alla föräldrar — uppdateras från Google Sheets. <strong id="last-refresh-txt">Klicka Uppdatera för att hämta senaste data.</strong></div>
+  <button onclick="loadAllResponses()" style="background:none;border:1.5px solid #444;color:#bbb;border-radius:5px;padding:6px 16px;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;margin-bottom:20px" onmouseover="this.style.background='var(--yellow)';this.style.color='#000'" onmouseout="this.style.background='none';this.style.color='#bbb'">↻ Uppdatera</button>
+  <div class="section-title">Spelare</div>
+  <div class="table-wrap"><table><thead id="ov-player-head"></thead><tbody id="ov-player-body"></tbody></table></div>
+  <div class="section-title">Ledare</div>
+  <div class="table-wrap"><table><thead id="ov-leader-head"></thead><tbody id="ov-leader-body"></tbody></table></div>
+</div>
+
+<!-- ══ SAMMANFATTNING ══ -->
+<div class="page" id="tab-sammanfattning">
+  <div class="sum-grid" id="sum-grid"></div>
+</div>
+
+<!-- ══ INFO ══ -->
+<div class="page" id="tab-info">
+  <div class="readme">
+    <p><strong>Kära föräldrar,</strong></p>
+    <p>Det är många cuper plus USM, men känn ingen press — det finns ingen förväntan eller krav att man är med på många cuper. Se det som ett smörgåsbord och anmäl till det ni själva tycker är lämplig utmaningsgrad för er dotter samt passar kalendern och plånboken.</p>
+    <p>Vi har valt många olika cuper för att kunna erbjuda olika mängd och utmaningsgrader för alla våra individer. Tag gärna kontakt med ledarna om ni har frågor.</p>
+    <p><strong>Svårighetsgradering:</strong></p>
+    <ul>
+      <li><span class="oopt" style="background:rgba(46,204,113,.15);color:#2ecc71">Lätt</span> Lägre motståndsnivå, bra för alla</li>
+      <li><span class="oopt" style="background:rgba(243,156,18,.15);color:#f39c12">Medel</span> Balanserad nivå</li>
+      <li><span class="oopt" style="background:rgba(231,76,60,.15);color:#e74c3c">Svår</span> Nationell toppnivå</li>
+      <li><span class="oopt" style="background:rgba(155,89,182,.15);color:#bb8fce">Extra svår</span> Internationell/USM-nivå</li>
+    </ul>
+    <p><strong>Coaching-färg:</strong> 🟢 Grön = alla spelar mycket &nbsp;·&nbsp; 🟡 Gul = alla spelar, bästa kan få mer &nbsp;·&nbsp; 🔴 Röd = speltid ej garanterad</p>
+    <p><strong>⭐ Prio-cuper</strong> — vi hoppas att så många som möjligt är med. Lagkassan stöttar dessa.</p>
+    <p><strong>Svarsalternativ:</strong></p>
+    <ul>
+      <li><strong>All in</strong> – Vi committar oss redan nu</li>
+      <li><strong>Troligtvis</strong> – Ser lovande ut men kan inte committa</li>
+      <li><strong>Tveksamt</strong> – Troligtvis nej, men möjlighet finns</li>
+      <li><strong>Nej</strong> – Kan/vill inte delta</li>
+    </ul>
+    <p style="color:var(--gold)">Frågor? Kontakta <strong>Björn</strong> eller <strong>Martin</strong>.</p>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// CONFIGURATION — paste your Apps Script URL here
+// OR let users paste it in the setup banner
+// ══════════════════════════════════════════
+const HARDCODED_SCRIPT_URL = ""; // Leave empty — users paste via banner, OR fill in after setup
+
+// ══════════════════════════════════════════
+// CUP DATA
+// ══════════════════════════════════════════
+const CUPS = [
+  {id:"c0",  name:"Skuru Cup",              date:"28-30 Augusti",   age:"2013", friday:"Nej",                    diff:"Medel",      coach:"Gul",     car:"Nej",    prio:false, cost:"Ca 300 kr",                   comment:""},
+  {id:"c1",  name:"Göteborg Cup",           date:"4-6 September",   age:"2013", friday:"Sannolikt",              diff:"Svår",       coach:"Röd",     car:"Gärna",  prio:false, cost:"Ca 1 500–2 000 kr",           comment:""},
+  {id:"c2",  name:"Örebro Cup",             date:"4-6 September",   age:"2013", friday:"Nej",                    diff:"Lätt/Medel", coach:"Grön",    car:"Ja",     prio:false, cost:"Ca 1 500–2 000 kr",           comment:"Alt 2 till Göteborg Cup"},
+  {id:"c3",  name:"USM Steg 1",             date:"17-18 Oktober",   age:"2012", friday:"?",                      diff:"Svår",       coach:"Gul/Röd", car:"Nej",    prio:false, cost:"Ca 2 000 kr",                 comment:""},
+  {id:"c4",  name:"Skadevi Cup",            date:"30 Okt – 1 Nov",  age:"2013", friday:"Sannolikt",              diff:"Svår",       coach:"Röd",     car:"Ja",     prio:false, cost:"Ca 1 500–2 000 kr",           comment:"Ev krock med Spökbollen"},
+  {id:"c5",  name:"Hellton Cup",            date:"28-30 November",  age:"2013", friday:"Förhoppningsvis inte",   diff:"Medel",      coach:"Grön",    car:"Ja",     prio:true,  cost:"Ca 1 500–2 000 kr",           comment:"Lagkassan stöttar 1 500 kr"},
+  {id:"c6",  name:"USM Steg 2",             date:"12-13 December",  age:"2012", friday:"?",                      diff:"Extra svår", coach:"Röd",     car:"Ja",     prio:false, cost:"Ca 2 000 kr",                 comment:""},
+  {id:"c7",  name:"Lundaspelen",            date:"27-30 December",  age:"2013", friday:"N/A (lovdagar)",         diff:"Extra svår", coach:"Röd",     car:"Ja",     prio:false, cost:"Ca 6 000 kr",                 comment:""},
+  {id:"c8",  name:"Kopparcupen",            date:"3-5 Januari",     age:"2013", friday:"N/A (lovdagar)",         diff:"Lätt/Medel", coach:"Grön",    car:"Nej/Ja", prio:false, cost:"Ca 1 500–2 000 kr",           comment:"Alt 2 till Lundaspelen"},
+  {id:"c9",  name:"USM Steg 3",             date:"6-7 Februari",    age:"–",    friday:"?",                      diff:"Extra svår", coach:"Röd",     car:"Ja",     prio:false, cost:"Ca 2 000 kr",                 comment:""},
+  {id:"c10", name:"Tyresö Cup",             date:"27/2 – 1/3",      age:"2011/2012", friday:"Nej",              diff:"Lätt/Medel", coach:"Grön",    car:"Ja",     prio:false, cost:"Ca 300 kr",                   comment:""},
+  {id:"c11", name:"USM Steg 4",             date:"10-11 April",     age:"2012", friday:"?",                      diff:"Extra svår", coach:"Röd",     car:"Ja",     prio:false, cost:"Ca 2 000 kr",                 comment:""},
+  {id:"c12", name:"Irstablixten",           date:"2-4 April",       age:"2013", friday:"Nej",                    diff:"Medel",      coach:"Gul",     car:"Ja",     prio:true,  cost:"Ca 1 500–2 000 kr",           comment:"Lagkassan stöttar 1 500 kr"},
+  {id:"c13", name:"Bohus Cup",              date:"Början av Maj",   age:"–",    friday:"–",                      diff:"Svår",       coach:"Gul",     car:"Gärna",  prio:false, cost:"Ca 1 500–2 000 kr",           comment:"Alt 1"},
+  {id:"c14", name:"Västerortscupen",        date:"Början av Maj",   age:"–",    friday:"–",                      diff:"Lätt",       coach:"Grön",    car:"Nej",    prio:false, cost:"Ca 300 kr",                   comment:"Alt 2 till Bohus Cup"},
+  {id:"c15", name:"Eken Cup (Rovinj?)",     date:"Juni TBD",        age:"2011", friday:"N/A",                    diff:"Medel",      coach:"–",       car:"Nej",    prio:true,  cost:"Max 500 kr",                  comment:"Kan krocka med Rovinj"},
+  {id:"c16", name:"Eken Cup",               date:"Juni",            age:"2013", friday:"Nej",                    diff:"Medel",      coach:"Gul",     car:"N/A",    prio:true,  cost:"Gratis",                      comment:""},
+  {id:"c17", name:"Partille Cup",           date:"29/6 – 4/7",      age:"2011", friday:"N/A",                    diff:"Extra svår", coach:"Röd",     car:"Nej",    prio:false, cost:"Ca 6 000 kr",                 comment:""}
+];
+
+const PLAYERS = [
+  "Bonnie Taranger","Zin Ari Cebe","Ebba Ridderheim Jonviken","Mio Johansson",
+  "Nova Öhgren Goude","Tyra Ridderheim Jonviken","Blanka Matusiak","Nathalie Vega",
+  "Celine Demirel","Elise Tjälldin","Ellen Hamming","Melina Varitimidou",
+  "Ida Ekelund","Penny Lindblad","Olivia Better","Agnes von Mecklenburg",
+  "Ebba Behm","Alicia Wikstad","Elsa Expert","Ellen Lindgren",
+  "Gabriella Saouma","Gizem Celebi","Melanie Södergren Tärnholm","Lea Westman",
+  "Antonia Lockner","Lina Krantz"
+];
+const LEADERS = ["Martin","Mikael","Mike","Danne","Patrick"];
+const ALL_PEOPLE = [...PLAYERS, ...LEADERS];
+
+const OPTS = ["All in","Troligtvis","Tveksamt","Nej"];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let scriptUrl = HARDCODED_SCRIPT_URL || localStorage.getItem('aik_script_url') || "";
+let currentUser = localStorage.getItem('aik_who') || "";
+let allResponses = {}; // {person: {cupId: val}}
+let activeFilters = {diff:"all", prio:"all"};
+
+function getScriptUrl(){ return scriptUrl; }
+
+// ══════════════════════════════════════════
+// STATUS
+// ══════════════════════════════════════════
+function setStatus(state, text){
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  dot.className = state;
+  txt.textContent = text;
+}
+
+// ══════════════════════════════════════════
+// SETUP
+// ══════════════════════════════════════════
+function saveScriptUrl(){
+  const val = document.getElementById('script-url-input').value.trim();
+  if(!val.startsWith('https://script.google.com')){
+    toast('⚠ URL ser inte ut som en Apps Script URL');
+    return;
+  }
+  scriptUrl = val;
+  localStorage.setItem('aik_script_url', val);
+  checkBanner();
+  testConnection();
+}
+
+function checkBanner(){
+  const banner = document.getElementById('setup-banner');
+  if(scriptUrl){
+    banner.classList.add('hidden');
+    document.getElementById('script-url-input').value = scriptUrl;
+  } else {
+    banner.classList.remove('hidden');
+  }
+}
+
+function testConnection(){
+  setStatus('loading','Testar anslutning…');
+  fetch(scriptUrl + '?action=ping')
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.ok){ setStatus('ok','Ansluten till Google Sheets ✓'); loadAllResponses(); }
+      else { setStatus('err','Svar från server men fel format'); }
+    })
+    .catch(()=>setStatus('err','Kunde inte nå Apps Script — kontrollera URL'));
+}
+
+// ══════════════════════════════════════════
+// WHO AM I
+// ══════════════════════════════════════════
+function onWhoChange(){
+  const sel = document.getElementById('who-select');
+  currentUser = sel.value;
+  localStorage.setItem('aik_who', currentUser);
+  sel.className = currentUser ? 'chosen' : '';
+  document.getElementById('who-hint').textContent = currentUser
+    ? '✓ Dina svar sparas under "' + currentUser + '"'
+    : 'Välj ditt namn för att kunna svara på cuper';
+  renderCupCards();
+}
+
+// ══════════════════════════════════════════
+// SEND RESPONSE
+// ══════════════════════════════════════════
+function sendResponse(cupId, value, cardEl){
+  if(!currentUser){ toast('Välj ditt namn först'); return; }
+  if(!scriptUrl){ toast('Konfigurera Apps Script URL först'); return; }
+
+  // Optimistic local update
+  if(!allResponses[currentUser]) allResponses[currentUser] = {};
+  allResponses[currentUser][cupId] = value;
+  renderCupCards();
+
+  // Show tick on card
+  const tick = cardEl.querySelector('.cup-saved-tick');
+  if(tick){ tick.textContent='Sparar…'; tick.style.opacity='1'; }
+
+  setStatus('loading','Sparar…');
+
+  fetch(scriptUrl, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action:'setResponse', person:currentUser, cup:cupId, value:value})
+  })
+  .then(()=>{
+    setStatus('ok','Sparat ✓');
+    if(tick){ tick.textContent='✓ Sparat'; setTimeout(()=>{ tick.style.opacity='0'; },2000); }
+    toast('✓ Svar sparat');
+  })
+  .catch(()=>{
+    setStatus('err','Kunde inte spara — kontrollera anslutning');
+    if(tick){ tick.textContent='⚠ Fel vid sparning'; }
+    toast('⚠ Kunde inte spara svaret');
+  });
+}
+
+// ══════════════════════════════════════════
+// LOAD ALL RESPONSES
+// ══════════════════════════════════════════
+function loadAllResponses(){
+  if(!scriptUrl) return;
+  setStatus('loading','Hämtar svar…');
+  fetch(scriptUrl + '?action=getAll')
+    .then(r=>r.json())
+    .then(data=>{
+      allResponses = data.responses || {};
+      setStatus('ok','Uppdaterat ' + new Date().toLocaleTimeString('sv-SE'));
+      document.getElementById('last-refresh-txt').textContent = 'Senast uppdaterat: ' + new Date().toLocaleTimeString('sv-SE');
+      renderCupCards();
+      renderOversikt();
+      renderSummary();
+    })
+    .catch(()=>setStatus('err','Kunde inte hämta svar'));
+}
+
+// ══════════════════════════════════════════
+// RENDER CUP CARDS
+// ══════════════════════════════════════════
+function diffBadge(d){
+  const dl = (d||'').toLowerCase();
+  if(dl.includes('extra')) return 'de';
+  if(dl.includes('svår')) return 'ds';
+  if(dl.includes('medel')&&dl.includes('lätt')) return 'dl';
+  if(dl.includes('medel')) return 'dm';
+  return 'dl';
+}
+function coachBadge(c){
+  const cl=(c||'').toLowerCase();
+  if(cl.includes('röd')) return 'cr';
+  if(cl.includes('gul')) return 'cy';
+  return 'cg';
+}
+function selClass(v){
+  if(!v) return '';
+  const vl=v.toLowerCase();
+  if(vl==='all in') return 'sel-allin';
+  if(vl==='troligtvis') return 'sel-troligtvis';
+  if(vl==='tveksamt') return 'sel-tveksamt';
+  if(vl==='nej') return 'sel-nej';
+  return '';
+}
+
+function renderCupCards(){
+  const grid = document.getElementById('cups-grid');
+  const myResps = (allResponses[currentUser]||{});
+  let html = '';
+  CUPS.forEach(c=>{
+    const diffL = (c.diff||'').toLowerCase();
+    const fDiff = activeFilters.diff;
+    const matchDiff = fDiff==='all'
+      ||(fDiff==='latt' && diffL.includes('lätt'))
+      ||(fDiff==='medel' && diffL.includes('medel') && !diffL.includes('extra'))
+      ||(fDiff==='svar' && diffL.includes('svår') && !diffL.includes('extra'))
+      ||(fDiff==='extra' && diffL.includes('extra'));
+    const matchPrio = activeFilters.prio==='all' || (activeFilters.prio==='prio' && c.prio);
+    if(!matchDiff||!matchPrio) return;
+
+    const myVal = myResps[c.id]||'';
+    const coachStr = c.coach&&c.coach!=='–' ? `<span class="badge ${coachBadge(c.coach)}">● ${c.coach}</span>` : '';
+
+    let respBtns = '';
+    if(currentUser){
+      OPTS.forEach(o=>{
+        respBtns += `<button class="resp-btn ${myVal===o?selClass(o):''}" onclick="sendResponse('${c.id}','${o}',this.closest('.cup-card'))">${o}</button>`;
+      });
+    } else {
+      respBtns = '<span style="font-size:11px;color:#444">Välj ditt namn för att svara</span>';
+    }
+
+    html += `
+    <div class="cup-card${c.prio?' prio':''}">
+      <div class="cup-hdr">
+        <div>
+          <div class="cup-name">${c.name}</div>
+          <div class="cup-date">📅 ${c.date}</div>
+        </div>
+        ${c.prio?'<div class="prio-badge">⭐ Prio</div>':''}
+      </div>
+      <div class="cup-body">
+        <div class="cup-meta-row">
+          <span class="badge ${diffBadge(c.diff)}">${c.diff}</span>
+          ${coachStr}
+        </div>
+        <div class="cup-cost">💰 ${c.cost}</div>
+        ${c.age&&c.age!=='–'?`<div class="cup-age">🎂 ${c.age} &nbsp;·&nbsp; 🚗 ${c.car} &nbsp;·&nbsp; 🏫 ${c.friday}</div>`:''}
+        ${c.comment?`<div class="cup-comment">${c.comment}</div>`:''}
+        <div class="cup-resp-area">
+          <div class="cup-resp-label">Ditt svar</div>
+          <div class="resp-btns">${respBtns}</div>
+          <div class="cup-saved-tick" style="opacity:0"></div>
+        </div>
+      </div>
+    </div>`;
+  });
+  grid.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// OVERSIKT TABLE
+// ══════════════════════════════════════════
+function cellBadge(v){
+  if(!v) return '<span class="cell-badge cb-empty">–</span>';
+  const vl=v.toLowerCase();
+  if(vl==='all in') return `<span class="cell-badge cb-allin">All in</span>`;
+  if(vl==='troligtvis') return `<span class="cell-badge cb-troligtvis">Troligtvis</span>`;
+  if(vl==='tveksamt') return `<span class="cell-badge cb-tveksamt">Tveksamt</span>`;
+  if(vl==='nej') return `<span class="cell-badge cb-nej">Nej</span>`;
+  return `<span class="cell-badge cb-empty">${v}</span>`;
+}
+
+function buildOvHead(elId){
+  let h = '<tr><th style="min-width:150px">Namn</th>';
+  CUPS.forEach(c=>{ h+=`<th class="cth" title="${c.name} – ${c.date}">${c.name.length>10?c.name.substring(0,9)+'…':c.name}</th>`; });
+  h+='</tr>';
+  document.getElementById(elId).innerHTML=h;
+}
+
+function buildOvBody(elId, people){
+  let rows='';
+  people.forEach(p=>{
+    const pr = allResponses[p]||{};
+    rows+=`<tr><td>${p}</td>`;
+    CUPS.forEach(c=>{ rows+=`<td class="cc">${cellBadge(pr[c.id]||'')}</td>`; });
+    rows+='</tr>';
+  });
+  document.getElementById(elId).innerHTML=rows;
+}
+
+function renderOversikt(){
+  buildOvHead('ov-player-head');
+  buildOvHead('ov-leader-head');
+  buildOvBody('ov-player-body', PLAYERS);
+  buildOvBody('ov-leader-body', LEADERS);
+}
+
+// ══════════════════════════════════════════
+// SUMMARY
+// ══════════════════════════════════════════
+function renderSummary(){
+  const grid = document.getElementById('sum-grid');
+  let html = '';
+  const total = PLAYERS.length;
+  CUPS.forEach(c=>{
+    let ct={allin:0,troligtvis:0,tveksamt:0,nej:0};
+    PLAYERS.forEach(p=>{
+      const v=(allResponses[p]||{})[c.id]||'';
+      if(v==='All in') ct.allin++;
+      else if(v==='Troligtvis') ct.troligtvis++;
+      else if(v==='Tveksamt') ct.tveksamt++;
+      else if(v==='Nej') ct.nej++;
+    });
+    const answered = ct.allin+ct.troligtvis+ct.tveksamt+ct.nej;
+    const pct = n => total ? Math.round(n/total*100) : 0;
+    html+=`
+    <div class="sum-card">
+      <div class="sum-card-name">${c.name}</div>
+      <div class="sum-card-date">${c.date}</div>
+      <div class="sbrow"><div class="sblabel">All in</div><div class="sbtrack"><div class="sbfill fa" style="width:${pct(ct.allin)}%"></div></div><div class="sbval">${ct.allin}</div></div>
+      <div class="sbrow"><div class="sblabel">Troligtvis</div><div class="sbtrack"><div class="sbfill ft" style="width:${pct(ct.troligtvis)}%"></div></div><div class="sbval">${ct.troligtvis}</div></div>
+      <div class="sbrow"><div class="sblabel">Tveksamt</div><div class="sbtrack"><div class="sbfill fv" style="width:${pct(ct.tveksamt)}%"></div></div><div class="sbval">${ct.tveksamt}</div></div>
+      <div class="sbrow"><div class="sblabel">Nej</div><div class="sbtrack"><div class="sbfill fn" style="width:${pct(ct.nej)}%"></div></div><div class="sbval">${ct.nej}</div></div>
+      <div class="sum-footer">${answered} av ${total} spelare har svarat</div>
+    </div>`;
+  });
+  grid.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// FILTERS / TABS
+// ══════════════════════════════════════════
+function setFilter(btn, type){
+  document.querySelectorAll('[data-f="'+type+'"]').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  activeFilters[type]=btn.dataset.v;
+  renderCupCards();
+}
+
+function showTab(name, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+  if(name==='oversikt') renderOversikt();
+  if(name==='sammanfattning') renderSummary();
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let toastTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+(function init(){
+  checkBanner();
+  if(currentUser){
+    const sel=document.getElementById('who-select');
+    sel.value=currentUser;
+    if(sel.value) sel.className='chosen';
+    document.getElementById('who-hint').textContent='✓ Dina svar sparas under "'+currentUser+'"';
+  }
+  if(scriptUrl){
+    document.getElementById('script-url-input').value=scriptUrl;
+    testConnection();
+  } else {
+    setStatus('','Ej konfigurerad');
+  }
+  renderCupCards();
+  renderOversikt();
+  renderSummary();
+  // Auto-refresh every 60s
+  setInterval(()=>{ if(scriptUrl) loadAllResponses(); }, 60000);
+})();
+</script>
+</body>
+</html>
