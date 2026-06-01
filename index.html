@@ -302,7 +302,7 @@ td.cc{text-align:center;padding:3px 5px}
 // CONFIGURATION — paste your Apps Script URL here
 // OR let users paste it in the setup banner
 // ══════════════════════════════════════════
-const HARDCODED_SCRIPT_URL = "https://dittanvändarnamn.github.io/aik-f13-cuper"; // Leave empty — users paste via banner, OR fill in after setup
+const HARDCODED_SCRIPT_URL = ""; // Leave empty — users paste via banner, OR fill in after setup
 
 // ══════════════════════════════════════════
 // CUP DATA
@@ -389,13 +389,12 @@ function checkBanner(){
 
 function testConnection(){
   setStatus('loading','Testar anslutning…');
-  fetch(scriptUrl + '?action=ping')
-    .then(r=>r.json())
-    .then(d=>{
-      if(d.ok){ setStatus('ok','Ansluten till Google Sheets ✓'); loadAllResponses(); }
-      else { setStatus('err','Svar från server men fel format'); }
-    })
-    .catch(()=>setStatus('err','Kunde inte nå Apps Script — kontrollera URL'));
+  jsonp(scriptUrl + '?action=ping&callback=__cb', function(d){
+    if(d && d.ok){ setStatus('ok','Ansluten till Google Sheets ✓'); loadAllResponses(); }
+    else { setStatus('err','Svar från server men fel format'); }
+  }, function(){
+    setStatus('err','Kunde inte nå Apps Script — kontrollera URL');
+  });
 }
 
 // ══════════════════════════════════════════
@@ -424,24 +423,22 @@ function sendResponse(cupId, value, cardEl){
   allResponses[currentUser][cupId] = value;
   renderCupCards();
 
-  // Show tick on card
   const tick = cardEl.querySelector('.cup-saved-tick');
   if(tick){ tick.textContent='Sparar…'; tick.style.opacity='1'; }
-
   setStatus('loading','Sparar…');
 
-  fetch(scriptUrl, {
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action:'setResponse', person:currentUser, cup:cupId, value:value})
-  })
-  .then(()=>{
+  // Use JSONP for write — avoids CORS entirely
+  const params = '?action=setResponse'
+    + '&person=' + encodeURIComponent(currentUser)
+    + '&cup=' + encodeURIComponent(cupId)
+    + '&value=' + encodeURIComponent(value)
+    + '&callback=__cb';
+
+  jsonp(scriptUrl + params, function(d){
     setStatus('ok','Sparat ✓');
-    if(tick){ tick.textContent='✓ Sparat'; setTimeout(()=>{ tick.style.opacity='0'; },2000); }
+    if(tick){ tick.textContent='✓ Sparat'; setTimeout(()=>{ tick.style.opacity='0'; },2500); }
     toast('✓ Svar sparat');
-  })
-  .catch(()=>{
+  }, function(){
     setStatus('err','Kunde inte spara — kontrollera anslutning');
     if(tick){ tick.textContent='⚠ Fel vid sparning'; }
     toast('⚠ Kunde inte spara svaret');
@@ -454,17 +451,16 @@ function sendResponse(cupId, value, cardEl){
 function loadAllResponses(){
   if(!scriptUrl) return;
   setStatus('loading','Hämtar svar…');
-  fetch(scriptUrl + '?action=getAll')
-    .then(r=>r.json())
-    .then(data=>{
-      allResponses = data.responses || {};
-      setStatus('ok','Uppdaterat ' + new Date().toLocaleTimeString('sv-SE'));
-      document.getElementById('last-refresh-txt').textContent = 'Senast uppdaterat: ' + new Date().toLocaleTimeString('sv-SE');
-      renderCupCards();
-      renderOversikt();
-      renderSummary();
-    })
-    .catch(()=>setStatus('err','Kunde inte hämta svar'));
+  jsonp(scriptUrl + '?action=getAll&callback=__cb', function(data){
+    allResponses = data.responses || {};
+    setStatus('ok','Uppdaterat ' + new Date().toLocaleTimeString('sv-SE'));
+    document.getElementById('last-refresh-txt').textContent = 'Senast uppdaterat: ' + new Date().toLocaleTimeString('sv-SE');
+    renderCupCards();
+    renderOversikt();
+    renderSummary();
+  }, function(){
+    setStatus('err','Kunde inte hämta svar');
+  });
 }
 
 // ══════════════════════════════════════════
@@ -648,6 +644,35 @@ function toast(msg){
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ══════════════════════════════════════════
+// JSONP — bypasses CORS for Google Apps Script
+// ══════════════════════════════════════════
+let __cbQueue = [];
+window.__cb = function(data){
+  const fn = __cbQueue.shift();
+  if(fn) fn(data);
+};
+function jsonp(url, onSuccess, onError){
+  __cbQueue.push(onSuccess);
+  const script = document.createElement('script');
+  script.src = url;
+  script.onerror = function(){
+    __cbQueue.shift();
+    if(onError) onError();
+    document.head.removeChild(script);
+  };
+  script.onload = function(){ document.head.removeChild(script); };
+  document.head.appendChild(script);
+  // Timeout fallback after 10s
+  setTimeout(function(){
+    const idx = __cbQueue.indexOf(onSuccess);
+    if(idx > -1){
+      __cbQueue.splice(idx,1);
+      if(onError) onError();
+    }
+  }, 10000);
 }
 
 // ══════════════════════════════════════════
